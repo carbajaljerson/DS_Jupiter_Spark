@@ -112,3 +112,6 @@ volumes:
   hadoop_datasets:
   hadoop_datanode:
   hadoop_historyserver:
+  shared-workspace:
+    name: "hadoop-distributed-file-system"
+    driver: local
