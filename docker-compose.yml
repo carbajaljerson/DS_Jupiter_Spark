@@ -1,13 +1,59 @@
----
 # ----------------------------------------------------------------------------------------
 # -- Docs: https://github.com/cluster-apps-on-docker/spark-standalone-cluster-on-docker --
 # ----------------------------------------------------------------------------------------
 version: "3.6"
-volumes:
-  shared-workspace:
-    name: "hadoop-distributed-file-system"
-    driver: local
+
 services:
+
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop2.7.4-java8
+    container_name: namenode
+    restart: always
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+      - hadoop_datasets:/home
+    environment:
+      - CLUSTER_NAME=test
+    env_file:
+      - ./hadoop-hive.env
+    ports:
+      - "9870:9870"
+    
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop2.7.4-java8
+    container_name: datanode
+    restart: always
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    env_file:
+      - ./hadoop-hive.env
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    ports:
+      - "9864:9864"
+
+  resourcemanager:
+    image: bde2020/hadoop-resourcemanager:2.0.0-hadoop2.7.4-java8
+    container_name: resourcemanager
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 datanode:9864"
+    volumes:
+      - hadoop_historyserver:/hadoop/yarn/timeline
+    env_file:
+      - ./hadoop-hive.env
+
+  historyserver:
+    image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
+    container_name: historyserver
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870 datanode:9864 resourcemanager:8088"
+    volumes:
+      - hadoop_historyserver:/hadoop/yarn/timeline
+    env_file:
+      - ./hadoop.env
+      
   jupyterlab:
     image: andreper/jupyterlab:3.0.0-spark-3.0.0
     container_name: jupyterlab
@@ -48,4 +94,12 @@ services:
       - shared-workspace:/opt/workspace
     depends_on:
       - spark-master
-...
+
+volumes:
+  hadoop_namenode:
+  hadoop_datasets:
+  hadoop_datanode:
+  hadoop_historyserver:
+  shared-workspace:
+    name: "hadoop-distributed-file-system"
+    driver: local
